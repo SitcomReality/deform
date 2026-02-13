@@ -89,6 +89,9 @@ class Game {
   
   render() {
     this.renderer.render(this.physics.bodies);
+    if (this.toolManager) {
+      this.renderer.renderCursor(null, this.physics.grabConstraint);
+    }
   }
 }
 

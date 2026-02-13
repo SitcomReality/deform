@@ -57,6 +57,7 @@ export class Renderer {
       }
       
       // Render constraints (edges)
+      this.ctx.lineWidth = 1;
       this.ctx.strokeStyle = CONFIG.COLORS.BACKGROUND;
       for (const constraint of body.constraints) {
         if (constraint.broken) continue;
@@ -69,6 +70,38 @@ export class Renderer {
         this.ctx.lineTo(p2.x, p2.y);
         this.ctx.stroke();
       }
+
+      // Render loose particles (sand/fluids)
+      for (const p of body.particles) {
+        if (p.color) { // Only render if it has an explicit color (sand)
+          const scr = this.worldToScreen(p.pos.x, p.pos.y);
+          const rad = p.radius * this.camera.zoom;
+          
+          this.ctx.fillStyle = p.color;
+          this.ctx.beginPath();
+          this.ctx.arc(scr.x, scr.y, rad, 0, Math.PI * 2);
+          this.ctx.fill();
+        }
+      }
+    }
+  }
+
+  renderCursor(cursorPos, grabConstraint) {
+    if (grabConstraint) {
+      const p1 = this.worldToScreen(grabConstraint.particle.pos.x, grabConstraint.particle.pos.y);
+      const p2 = this.worldToScreen(grabConstraint.pos.x, grabConstraint.pos.y);
+      
+      this.ctx.beginPath();
+      this.ctx.moveTo(p1.x, p1.y);
+      this.ctx.lineTo(p2.x, p2.y);
+      this.ctx.strokeStyle = CONFIG.COLORS.DRAG_LINE;
+      this.ctx.lineWidth = 2;
+      this.ctx.stroke();
+      
+      this.ctx.beginPath();
+      this.ctx.arc(p2.x, p2.y, 5, 0, Math.PI * 2);
+      this.ctx.fillStyle = CONFIG.COLORS.DRAG_LINE;
+      this.ctx.fill();
     }
   }
 }

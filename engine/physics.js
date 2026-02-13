@@ -1,11 +1,13 @@
 import { CONFIG } from '../config.js';
-import { Particle, Constraint } from './mesh.js';
+import { Particle, Constraint, Triangle } from './mesh.js';
+import { lineIntersects } from '../utils/math.js';
 
 export class PhysicsEngine {
   constructor() {
     this.bodies = [];
     this.spatialHash = new Map();
-    this.terrainBody = null; // Main terrain body for manipulation
+    this.terrainBody = null;
+    this.grabConstraint = null;
   }
   
   addBody(body) {
@@ -15,33 +17,119 @@ export class PhysicsEngine {
     }
   }
   
-  createParticle(x, y) {
+  createParticle(x, y, mass = 1, color = null) {
     if (!this.terrainBody) return null;
-    const particle = new Particle(x, y);
+    const particle = new Particle(x, y, mass, false, color);
     this.terrainBody.addParticle(particle);
     return particle;
   }
   
-  connectNearbyParticles(particle, maxDist) {
+  linkParticles(p1, p2, stiffness = 1.0, breakingThreshold = Infinity) {
+    if (!this.terrainBody) return;
+    const constraint = new Constraint(p1, p2, stiffness, breakingThreshold);
+    this.terrainBody.addConstraint(constraint);
+    return constraint;
+  }
+
+  triangulate(particle, radius) {
     if (!this.terrainBody) return;
     
+    // Find nearby particles
     const nearby = [];
     for (const p of this.terrainBody.particles) {
       if (p === particle) continue;
       const dx = p.pos.x - particle.pos.x;
       const dy = p.pos.y - particle.pos.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < maxDist) {
+      if (dist < radius) {
         nearby.push({ particle: p, dist });
       }
     }
     
+    // Sort by distance
     nearby.sort((a, b) => a.dist - b.dist);
     
-    for (let i = 0; i < Math.min(3, nearby.length); i++) {
-      const constraint = new Constraint(particle, nearby[i].particle, 1.0, 5);
-      this.terrainBody.addConstraint(constraint);
+    // Connect to closest valid neighbors to form triangles
+    let connectedCount = 0;
+    for (const neighbor of nearby) {
+      if (connectedCount >= 3) break;
+      
+      const p2 = neighbor.particle;
+      
+      // Check if this connection would cross existing constraints (optional, expensive)
+      // For now just connect
+      
+      this.linkParticles(particle, p2, 1.0, 8);
+      
+      // Try to make a triangle with this neighbor and another neighbor
+      for (const other of nearby) {
+        if (other.particle === p2) continue;
+        const p3 = other.particle;
+        
+        // Check if p2 and p3 are connected
+        const p2p3 = this.findConstraint(p2, p3);
+        if (p2p3) {
+          // We have a triangle particle-p2-p3
+          this.terrainBody.addTriangle(new Triangle(particle, p2, p3, CONFIG.COLORS.TERRAIN));
+        }
+      }
+      
+      connectedCount++;
     }
+  }
+
+  findConstraint(p1, p2) {
+    if (!this.terrainBody) return null;
+    return this.terrainBody.constraints.find(c => 
+      (c.p1 === p1 && c.p2 === p2) || (c.p1 === p2 && c.p2 === p1)
+    );
+  }
+
+  cutLine(p1, p2) {
+    if (!this.terrainBody) return;
+    
+    for (const constraint of this.terrainBody.constraints) {
+      if (constraint.broken) continue;
+      if (lineIntersects(p1, p2, constraint.p1.pos, constraint.p2.pos)) {
+        constraint.broken = true;
+      }
+    }
+  }
+
+  startGrab(pos) {
+    if (!this.terrainBody) return;
+    
+    let closest = null;
+    let minDist = 2.0; // Grab radius
+    
+    for (const p of this.terrainBody.particles) {
+      const dist = Math.sqrt(
+        Math.pow(p.pos.x - pos.x, 2) + 
+        Math.pow(p.pos.y - pos.y, 2)
+      );
+      if (dist < minDist) {
+        minDist = dist;
+        closest = p;
+      }
+    }
+    
+    if (closest) {
+      this.grabConstraint = {
+        particle: closest,
+        pos: { x: pos.x, y: pos.y }
+      };
+    }
+  }
+
+  updateGrab(pos) {
+    if (this.grabConstraint) {
+      this.grabConstraint.pos.x = pos.x;
+      this.grabConstraint.pos.y = pos.y;
+    }
+  }
+
+  endGrab() {
+    this.grabConstraint = null;
   }
   
   removeParticlesInRadius(x, y, radius) {
@@ -150,6 +238,20 @@ export class PhysicsEngine {
   }
   
   solveConstraints() {
+    // Mouse Interaction
+    if (this.grabConstraint) {
+      const p = this.grabConstraint.particle;
+      const target = this.grabConstraint.pos;
+      const dx = target.x - p.pos.x;
+      const dy = target.y - p.pos.y;
+      
+      // Spring force towards mouse
+      if (!p.pinned) {
+        p.pos.x += dx * 0.2;
+        p.pos.y += dy * 0.2;
+      }
+    }
+
     for (let iter = 0; iter < CONFIG.PHYSICS.CONSTRAINT_ITERATIONS; iter++) {
       for (const body of this.bodies) {
         for (const constraint of body.constraints) {

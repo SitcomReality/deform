@@ -2,9 +2,10 @@ export class ToolManager {
   constructor(physics, renderer) {
     this.physics = physics;
     this.renderer = renderer;
-    this.activeTool = 'draw';
+    this.activeTool = 'drag';
     this.isDragging = false;
     this.lastPos = null;
+    this.lastParticle = null; // For connecting chains
     
     this.setupUI();
     this.setupInput();
@@ -26,11 +27,18 @@ export class ToolManager {
     `;
     
     const tools = [
-      { name: 'draw', icon: '✏️', label: 'Draw' },
-      { name: 'erase', icon: '🗑️', label: 'Erase' },
+      { name: 'drag', icon: '✋', label: 'Drag' },
+      { name: 'draw', icon: '✏️', label: 'Build' },
+      { name: 'sand', icon: '⌛', label: 'Sand' },
+      { name: 'cut', icon: '✂️', label: 'Cut' },
       { name: 'pin', icon: '📌', label: 'Pin' },
-      { name: 'explode', icon: '💥', label: 'Explode' }
+      { name: 'erase', icon: '🗑️', label: 'Erase' },
+      { name: 'explode', icon: '💥', label: 'Boom' }
     ];
+    
+    // Prevent dragging on toolbar
+    toolBar.addEventListener('mousedown', e => e.stopPropagation());
+    toolBar.addEventListener('touchstart', e => e.stopPropagation());
     
     for (const tool of tools) {
       const btn = document.createElement('button');
@@ -39,11 +47,13 @@ export class ToolManager {
         background: ${this.activeTool === tool.name ? '#6B0FFF' : '#1a1a1a'};
         border: 2px solid #00FFFF;
         color: #fff;
-        padding: 10px;
+        padding: 8px 12px;
         font-family: 'Space Mono', monospace;
         cursor: pointer;
-        min-width: 70px;
+        min-width: 60px;
         transition: all 0.2s;
+        border-radius: 4px;
+        user-select: none;
       `;
       
       btn.addEventListener('click', () => {
@@ -80,6 +90,8 @@ export class ToolManager {
     const handleEnd = () => {
       this.isDragging = false;
       this.lastPos = null;
+      this.lastParticle = null;
+      this.physics.endGrab();
     };
     
     // Mouse
@@ -108,8 +120,17 @@ export class ToolManager {
   
   useTool(worldPos) {
     switch (this.activeTool) {
+      case 'drag':
+        this.handleDrag(worldPos);
+        break;
       case 'draw':
-        this.drawTerrain(worldPos);
+        this.drawStructure(worldPos);
+        break;
+      case 'sand':
+        this.pourSand(worldPos);
+        break;
+      case 'cut':
+        this.cutTool(worldPos);
         break;
       case 'erase':
         this.eraseTerrain(worldPos);
@@ -122,23 +143,52 @@ export class ToolManager {
         break;
     }
   }
+
+  handleDrag(pos) {
+    if (!this.physics.grabConstraint) {
+      this.physics.startGrab(pos);
+    }
+    this.physics.updateGrab(pos);
+  }
   
-  drawTerrain(pos) {
-    // Create small particle clusters
-    if (this.lastPos) {
+  drawStructure(pos) {
+    const minStep = 2.0;
+    
+    // Check distance from last particle
+    if (this.lastParticle) {
       const dist = Math.sqrt(
-        Math.pow(pos.x - this.lastPos.x, 2) + 
-        Math.pow(pos.y - this.lastPos.y, 2)
+        Math.pow(pos.x - this.lastParticle.pos.x, 2) + 
+        Math.pow(pos.y - this.lastParticle.pos.y, 2)
       );
-      
-      if (dist < 0.5) return; // Too close, skip
+      if (dist < minStep) return;
+    }
+
+    const particle = this.physics.createParticle(pos.x, pos.y);
+    
+    // Connect to previous in chain
+    if (this.lastParticle) {
+      this.physics.linkParticles(this.lastParticle, particle, 1.0, 8);
     }
     
-    // Add a single particle (simplified for now)
-    const particle = this.physics.createParticle(pos.x, pos.y);
-    if (particle) {
-      // Try to connect to nearby particles
-      this.physics.connectNearbyParticles(particle, 2);
+    // Triangulate with nearby existing structure
+    this.physics.triangulate(particle, 3.5);
+    
+    this.lastParticle = particle;
+  }
+  
+  pourSand(pos) {
+    // Pour rate limit
+    if (Math.random() > 0.5) return;
+    
+    const jitterX = (Math.random() - 0.5) * 1.5;
+    const jitterY = (Math.random() - 0.5) * 1.5;
+    
+    this.physics.createParticle(pos.x + jitterX, pos.y + jitterY, 0.5, '#FFD700');
+  }
+
+  cutTool(pos) {
+    if (this.lastPos) {
+      this.physics.cutLine(this.lastPos, pos);
     }
   }
   
@@ -148,11 +198,17 @@ export class ToolManager {
   }
   
   pinParticles(pos) {
+    // Debounce pin to avoid rapid toggle
+    if (Math.random() > 0.1) return; 
+    
     const radius = 1.5;
     this.physics.pinParticlesInRadius(pos.x, pos.y, radius);
   }
   
   explodeParticles(pos) {
+    // Explosion should only happen on click start really, but drag is fun too
+    if (Math.random() > 0.1) return;
+    
     const radius = 5;
     const force = 50;
     this.physics.explodeParticlesInRadius(pos.x, pos.y, radius, force);

@@ -10,6 +10,8 @@ export const CONFIG = {
     FLUID_WATER: '#00FFFF80',
     FLUID_LAVA: '#FF0080',
     FLUID_ACID: '#39FF14',
+    SAND: '#FFD700',
+    DRAG_LINE: '#FFFFFF',
   },
   
   // Physics
