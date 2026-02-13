@@ -51,9 +51,9 @@ export class Player {
       this.onGround = false;
     }
     
-    // Check if on ground (simple check for now)
+    // Check if on ground (simple check for now based on floor level)
     const lowestY = Math.max(...this.particles.map(p => p.pos.y));
-    this.onGround = lowestY > 20; // Temporary
+    this.onGround = lowestY > 5; // Updated to match world scale
   }
   
   getCenterPosition() {

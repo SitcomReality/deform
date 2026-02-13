@@ -11,16 +11,19 @@ export class TerrainGenerator {
     const body = new SoftBody();
     const size = CONFIG.WORLD.CHUNK_SIZE;
     const particles = [];
+    const bedrockY = 30; // Base of the world
     
     // Generate height map
     for (let x = 0; x < size; x++) {
       const worldX = chunkX * size + x;
-      const height = this.getTerrainHeight(worldX);
+      const thickness = this.getTerrainHeight(worldX);
       const column = [];
       
-      for (let y = 0; y < height; y++) {
-        const worldY = chunkY * size + y;
-        const particle = new Particle(worldX, worldY, 1, y === 0);
+      for (let y = 0; y < thickness; y++) {
+        // Build upwards from bedrock (decreasing Y is up)
+        const worldY = bedrockY - y;
+        const isBedrock = (y === 0);
+        const particle = new Particle(worldX, worldY, 1, isBedrock);
         body.addParticle(particle);
         column.push(particle);
       }

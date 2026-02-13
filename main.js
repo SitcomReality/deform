@@ -34,31 +34,17 @@ class Game {
     // Generate world
     await this.generateWorld(seed);
     
-    // Create player (place above terrain surface if present)
+    // Create player
     this.screenManager.setLoadingProgress(80, 'Spawning player...');
     await this.sleep(200);
-
-    // choose spawn X (can be tuned)
-    const spawnX = 10;
-
-    // find highest terrain particle at spawnX across physics bodies
-    let surfaceY = -Infinity;
-    for (const body of this.physics.bodies) {
-      if (!body.particles) continue;
-      for (const p of body.particles) {
-        // consider particles near the spawnX (within 0.5 world units)
-        if (Math.abs(p.pos.x - spawnX) <= 0.6) {
-          if (p.pos.y > surfaceY) surfaceY = p.pos.y;
-        }
-      }
-    }
-
-    // default spawn if no terrain found
-    const defaultY = 10;
-    const safeOffset = (CONFIG.PLAYER.SIZE * 2) + 2; // leave some space above terrain
-    const spawnY = (surfaceY === -Infinity) ? defaultY : (surfaceY - safeOffset);
-
-    this.player = new Player(spawnX, spawnY);
+    
+    // Find safe spawn height at x=0
+    const terrainGen = new TerrainGenerator(seed);
+    const surfaceThickness = terrainGen.getTerrainHeight(0);
+    const surfaceY = 30 - surfaceThickness;
+    
+    // Spawn player safely above the surface
+    this.player = new Player(0, surfaceY - 5);
     this.physics.addBody(this.player.body);
     
     // Setup input

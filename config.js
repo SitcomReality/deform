@@ -14,7 +14,7 @@ export const CONFIG = {
   
   // Physics
   PHYSICS: {
-    GRAVITY: 0.5,
+    GRAVITY: 0.8,
     DAMPING: 0.98,
     CONSTRAINT_ITERATIONS: 3,
     SUBSTEPS: 2,
@@ -31,9 +31,9 @@ export const CONFIG = {
   
   // Player
   PLAYER: {
-    SIZE: 1.0,
-    SPEED: 0.3,
-    JUMP_FORCE: 8,
+    SIZE: 0.8,
+    SPEED: 0.5,
+    JUMP_FORCE: 12,
   },
   
   // Performance
