@@ -5,6 +5,7 @@ export class Renderer {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d', { alpha: false });
     this.camera = { x: CONFIG.WORLD.LEVEL_WIDTH / 2, y: CONFIG.WORLD.LEVEL_HEIGHT / 2, zoom: 15 };
+    this.cellSize = CONFIG.PERF.SPATIAL_CELL_SIZE;
     
     this.resize();
     window.addEventListener('resize', () => this.resize());
