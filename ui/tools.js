@@ -1,4 +1,5 @@
 import { SoftBody } from '../engine/mesh.js';
+import { CONFIG } from '../config.js';
 
 export class ToolManager {
   constructor(physics, renderer, game) {
