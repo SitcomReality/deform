@@ -49,10 +49,15 @@ export class PhysicsEngine {
   }
   
   linkParticles(p1, p2, stiffness = 1.0, breakingThreshold = Infinity) {
-    if (!this.terrainBody) return;
+    if (!this.terrainBody || !p1 || !p2) return;
     const constraint = new Constraint(p1, p2, stiffness, breakingThreshold);
     this.terrainBody.addConstraint(constraint);
     return constraint;
+  }
+
+  addTriangle(p1, p2, p3) {
+    if (!this.terrainBody || !p1 || !p2 || !p3) return;
+    this.terrainBody.addTriangle(new Triangle(p1, p2, p3, CONFIG.COLORS.TERRAIN));
   }
 
   triangulate(particle, radius) {

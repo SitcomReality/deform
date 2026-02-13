@@ -8,6 +8,7 @@ export class ToolManager {
     this.activeTool = 'drag';
     this.brushSize = 3;
     this.isDragging = false;
+    this.currentWorldPos = { x: 0, y: 0 };
     this.lastPos = null;
     this.lastParticle = null; // For connecting chains
     
@@ -153,8 +154,9 @@ export class ToolManager {
     };
     
     const handleMove = (x, y) => {
-      if (!this.isDragging) return;
       const worldPos = this.renderer.screenToWorld(x, y);
+      this.currentWorldPos = worldPos;
+      if (!this.isDragging) return;
       this.useTool(worldPos);
       this.lastPos = worldPos;
     };
@@ -224,26 +226,40 @@ export class ToolManager {
   }
   
   drawStructure(pos) {
-    const minStep = 2.0;
+    const minStep = 1.5;
     
-    // Check distance from last particle
-    if (this.lastParticle) {
-      const dist = Math.sqrt(
-        Math.pow(pos.x - this.lastParticle.pos.x, 2) + 
-        Math.pow(pos.y - this.lastParticle.pos.y, 2)
-      );
-      if (dist < minStep) return;
+    // If it's a new stroke, try to start with a sturdy triangle base
+    if (!this.lastParticle) {
+      const p1 = this.physics.createParticle(pos.x, pos.y - 0.5);
+      const p2 = this.physics.createParticle(pos.x - 0.5, pos.y + 0.5);
+      const p3 = this.physics.createParticle(pos.x + 0.5, pos.y + 0.5);
+      
+      this.physics.linkParticles(p1, p2, 1.0, 10);
+      this.physics.linkParticles(p2, p3, 1.0, 10);
+      this.physics.linkParticles(p3, p1, 1.0, 10);
+      this.physics.addTriangle(p1, p2, p3);
+      
+      this.lastParticle = p1;
+      return;
     }
 
+    const dist = Math.sqrt(
+      Math.pow(pos.x - this.lastParticle.pos.x, 2) + 
+      Math.pow(pos.y - this.lastParticle.pos.y, 2)
+    );
+    
+    if (dist < minStep) return;
+
+    // Create a new particle and link it to form a "ribbon"
     const particle = this.physics.createParticle(pos.x, pos.y);
     
-    // Connect to previous in chain
-    if (this.lastParticle) {
-      this.physics.linkParticles(this.lastParticle, particle, 1.0, 8);
-    }
+    // Always link to previous in stroke
+    this.physics.linkParticles(this.lastParticle, particle, 1.0, 10);
     
-    // Triangulate with nearby existing structure
-    this.physics.triangulate(particle, 3.5);
+    // Auto-triangulate based on brush size for thicker structures
+    // The triangulation radius scales slightly with brush size to fill volume
+    const triRadius = Math.max(3.0, this.brushSize * 0.8);
+    this.physics.triangulate(particle, triRadius);
     
     this.lastParticle = particle;
   }

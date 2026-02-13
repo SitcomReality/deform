@@ -97,7 +97,12 @@ class Game {
   render() {
     this.renderer.render(this.physics.bodies);
     if (this.toolManager) {
-      this.renderer.renderCursor(null, this.physics.grabConstraint);
+      this.renderer.renderCursor(
+        this.toolManager.currentWorldPos,
+        this.toolManager.activeTool,
+        this.toolManager.brushSize,
+        this.physics.grabConstraint
+      );
     }
   }
 }

@@ -86,7 +86,27 @@ export class Renderer {
     }
   }
 
-  renderCursor(cursorPos, grabConstraint) {
+  renderCursor(cursorPos, activeTool, brushSize, grabConstraint) {
+    if (!cursorPos) return;
+
+    const screenPos = this.worldToScreen(cursorPos.x, cursorPos.y);
+    const screenRadius = brushSize * this.camera.zoom;
+
+    // Draw the brush outline
+    this.ctx.beginPath();
+    this.ctx.arc(screenPos.x, screenPos.y, screenRadius, 0, Math.PI * 2);
+    this.ctx.strokeStyle = CONFIG.COLORS.SECONDARY;
+    this.ctx.lineWidth = 1;
+    this.ctx.setLineDash([5, 5]);
+    this.ctx.stroke();
+    this.ctx.setLineDash([]);
+
+    // Draw tool-specific cursor
+    this.ctx.beginPath();
+    this.ctx.arc(screenPos.x, screenPos.y, 3, 0, Math.PI * 2);
+    this.ctx.fillStyle = CONFIG.COLORS.PRIMARY;
+    this.ctx.fill();
+
     if (grabConstraint) {
       const p1 = this.worldToScreen(grabConstraint.particle.pos.x, grabConstraint.particle.pos.y);
       const p2 = this.worldToScreen(grabConstraint.pos.x, grabConstraint.pos.y);
