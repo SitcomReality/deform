@@ -30,8 +30,8 @@ export class Player {
     this.body.addTriangle(new Triangle(p1, p2, p3, RENDER_CONFIG.COLORS.PLAYER));
     this.body.addTriangle(new Triangle(p1, p3, p4, RENDER_CONFIG.COLORS.PLAYER));
     
-    // Add center particle for structural stability
-    const pc = new Particle(x, y - size, 1.2);
+    // Add center particle for structural stability - with slightly larger radius for core collision
+    const pc = new Particle(x, y - size, 1.2, false, 0.2);
     this.body.addParticle(pc);
     this.body.addConstraint(new Constraint(p1, pc, 1.0));
     this.body.addConstraint(new Constraint(p2, pc, 1.0));

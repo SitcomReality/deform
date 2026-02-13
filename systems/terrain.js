@@ -40,7 +40,12 @@ export class TerrainGenerator {
       for (let y = 0; y < Math.min(col1.length, col2.length); y++) {
         // Horizontal constraint
         if (col2[y]) {
-          body.addConstraint(new Constraint(col1[y], col2[y], 1.0, 5));
+          const c = new Constraint(col1[y], col2[y], 1.0, 5);
+          body.addConstraint(c);
+          // If this is the top layer, it's a surface edge
+          if (y === col1.length - 1 && y === col2.length - 1) {
+            body.edges.push(c);
+          }
         }
         
         // Vertical constraint
