@@ -95,9 +95,7 @@ class Game {
   }
   
   render() {
-    // Pass pressureMap from physics if available
-    const pressureMap = this.physics.pressureMap || null;
-    this.renderer.render(this.physics.bodies, pressureMap);
+    this.renderer.render(this.physics.bodies);
     if (this.toolManager) {
       this.renderer.renderCursor(null, this.physics.grabConstraint);
     }

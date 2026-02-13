@@ -289,10 +289,8 @@ export class PhysicsEngine {
   
   updateSpatialHash() {
     this.spatialHash.clear();
-    this.pressureMap = new Map(); // key -> pressure value
     const cellSize = CONFIG.PERF.SPATIAL_CELL_SIZE;
     
-    // Build spatial hash
     for (const body of this.bodies) {
       for (const particle of body.particles) {
         const cellX = Math.floor(particle.pos.x / cellSize);
@@ -304,17 +302,6 @@ export class PhysicsEngine {
         }
         this.spatialHash.get(key).push(particle);
       }
-    }
-    
-    // Simple pressure estimation: pressure ~ (particle_count * fluid_density)
-    // and relative to an expected baseline; store signed pressure for visualization.
-    const baseline = 1.0; // expected particles per cell (tunable)
-    const k = 0.5; // pressure scaling factor
-    for (const [key, cellParticles] of this.spatialHash.entries()) {
-      const count = cellParticles.length;
-      // Pressure positive when denser than baseline, negative when rarer (low pressure)
-      const pressure = (count - baseline) * CONFIG.PHYSICS.FLUID_DENSITY * k;
-      this.pressureMap.set(key, pressure);
     }
   }
   

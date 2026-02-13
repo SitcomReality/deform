@@ -16,7 +16,7 @@ export const CONFIG = {
   
   // Physics
   PHYSICS: {
-    GRAVITY: 0.5,
+    GRAVITY: 20,
     DAMPING: 0.98,
     CONSTRAINT_ITERATIONS: 3,
     SUBSTEPS: 2,
