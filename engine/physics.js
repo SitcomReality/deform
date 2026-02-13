@@ -1,4 +1,5 @@
-import { CONFIG } from '../config.js';
+import { PHYSICS_CONFIG } from '../config/physics.js';
+import { PERF_CONFIG } from '../config/perf.js';
 
 export class PhysicsEngine {
   constructor() {
@@ -11,9 +12,9 @@ export class PhysicsEngine {
   }
   
   update(dt) {
-    const substepDt = dt / CONFIG.PHYSICS.SUBSTEPS;
+    const substepDt = dt / PHYSICS_CONFIG.SUBSTEPS;
     
-    for (let i = 0; i < CONFIG.PHYSICS.SUBSTEPS; i++) {
+    for (let i = 0; i < PHYSICS_CONFIG.SUBSTEPS; i++) {
       this.applyForces(substepDt);
       this.integrate(substepDt);
       this.solveConstraints();
@@ -27,7 +28,7 @@ export class PhysicsEngine {
       for (const particle of body.particles) {
         if (!particle.pinned) {
           // Gravity
-          particle.force.y += CONFIG.PHYSICS.GRAVITY * particle.mass;
+          particle.force.y += PHYSICS_CONFIG.GRAVITY * particle.mass;
         }
       }
     }
@@ -40,8 +41,8 @@ export class PhysicsEngine {
         
         // Verlet integration
         const vel = {
-          x: (particle.pos.x - particle.oldPos.x) * CONFIG.PHYSICS.DAMPING,
-          y: (particle.pos.y - particle.oldPos.y) * CONFIG.PHYSICS.DAMPING
+          x: (particle.pos.x - particle.oldPos.x) * PHYSICS_CONFIG.DAMPING,
+          y: (particle.pos.y - particle.oldPos.y) * PHYSICS_CONFIG.DAMPING
         };
         
         particle.oldPos.x = particle.pos.x;
@@ -57,7 +58,7 @@ export class PhysicsEngine {
   }
   
   solveConstraints() {
-    for (let iter = 0; iter < CONFIG.PHYSICS.CONSTRAINT_ITERATIONS; iter++) {
+    for (let iter = 0; iter < PHYSICS_CONFIG.CONSTRAINT_ITERATIONS; iter++) {
       for (const body of this.bodies) {
         for (const constraint of body.constraints) {
           if (!constraint.broken) {
@@ -70,7 +71,7 @@ export class PhysicsEngine {
   
   updateSpatialHash() {
     this.spatialHash.clear();
-    const cellSize = CONFIG.PERF.SPATIAL_CELL_SIZE;
+    const cellSize = PERF_CONFIG.SPATIAL_CELL_SIZE;
     
     for (const body of this.bodies) {
       for (const particle of body.particles) {

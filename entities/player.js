@@ -1,5 +1,6 @@
 import { SoftBody, Particle, Constraint, Triangle } from '../engine/mesh.js';
-import { CONFIG } from '../config.js';
+import { PLAYER_CONFIG } from '../config/player.js';
+import { RENDER_CONFIG } from '../config/render.js';
 
 export class Player {
   constructor(x, y) {
@@ -8,7 +9,7 @@ export class Player {
     this.onGround = false;
     
     // Create player as a simple triangulated rectangle
-    const size = CONFIG.PLAYER.SIZE;
+    const size = PLAYER_CONFIG.SIZE;
     const p1 = new Particle(x - size, y - size * 2);
     const p2 = new Particle(x + size, y - size * 2);
     const p3 = new Particle(x + size, y);
@@ -26,14 +27,14 @@ export class Player {
     this.body.addConstraint(new Constraint(p1, p3, 0.9));
     this.body.addConstraint(new Constraint(p2, p4, 0.9));
     
-    this.body.addTriangle(new Triangle(p1, p2, p3, CONFIG.COLORS.PLAYER));
-    this.body.addTriangle(new Triangle(p1, p3, p4, CONFIG.COLORS.PLAYER));
+    this.body.addTriangle(new Triangle(p1, p2, p3, RENDER_CONFIG.COLORS.PLAYER));
+    this.body.addTriangle(new Triangle(p1, p3, p4, RENDER_CONFIG.COLORS.PLAYER));
     
     this.particles = [p1, p2, p3, p4];
   }
   
   update() {
-    const speed = CONFIG.PLAYER.SPEED;
+    const speed = PLAYER_CONFIG.SPEED;
     
     for (const p of this.particles) {
       if (this.input.left) {
@@ -46,7 +47,7 @@ export class Player {
     
     if (this.input.jump && this.onGround) {
       for (const p of this.particles) {
-        p.applyForce(0, -CONFIG.PLAYER.JUMP_FORCE);
+        p.applyForce(0, -PLAYER_CONFIG.JUMP_FORCE);
       }
       this.onGround = false;
     }

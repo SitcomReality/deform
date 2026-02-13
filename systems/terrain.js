@@ -1,5 +1,6 @@
 import { SoftBody, Particle, Constraint, Triangle } from '../engine/mesh.js';
-import { CONFIG } from '../config.js';
+import { WORLD_CONFIG } from '../config/world.js';
+import { RENDER_CONFIG } from '../config/render.js';
 import { SeededRandom } from '../utils/random.js';
 
 export class TerrainGenerator {
@@ -9,7 +10,7 @@ export class TerrainGenerator {
   
   generateChunk(chunkX, chunkY) {
     const body = new SoftBody();
-    const size = CONFIG.WORLD.CHUNK_SIZE;
+    const size = WORLD_CONFIG.CHUNK_SIZE;
     const particles = [];
     const bedrockY = 30; // Base of the world
     
@@ -55,8 +56,8 @@ export class TerrainGenerator {
         
         // Create triangles
         if (col2[y] && y > 0 && col2[y - 1]) {
-          body.addTriangle(new Triangle(col1[y], col2[y], col1[y - 1], CONFIG.COLORS.TERRAIN));
-          body.addTriangle(new Triangle(col2[y], col2[y - 1], col1[y - 1], CONFIG.COLORS.TERRAIN));
+          body.addTriangle(new Triangle(col1[y], col2[y], col1[y - 1], RENDER_CONFIG.COLORS.TERRAIN));
+          body.addTriangle(new Triangle(col2[y], col2[y - 1], col1[y - 1], RENDER_CONFIG.COLORS.TERRAIN));
         }
       }
     }

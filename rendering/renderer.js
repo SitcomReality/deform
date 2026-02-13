@@ -1,4 +1,4 @@
-import { CONFIG } from '../config.js';
+import { RENDER_CONFIG } from '../config/render.js';
 
 export class Renderer {
   constructor(canvas) {
@@ -16,7 +16,7 @@ export class Renderer {
   }
   
   clear() {
-    this.ctx.fillStyle = CONFIG.COLORS.BACKGROUND;
+    this.ctx.fillStyle = RENDER_CONFIG.COLORS.BACKGROUND;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
   }
   
@@ -57,7 +57,7 @@ export class Renderer {
       }
       
       // Render constraints (edges)
-      this.ctx.strokeStyle = CONFIG.COLORS.BACKGROUND;
+      this.ctx.strokeStyle = RENDER_CONFIG.COLORS.BACKGROUND;
       for (const constraint of body.constraints) {
         if (constraint.broken) continue;
         

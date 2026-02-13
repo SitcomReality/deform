@@ -1,4 +1,3 @@
-import { CONFIG } from './config.js';
 import { PhysicsEngine } from './engine/physics.js';
 import { TerrainGenerator } from './systems/terrain.js';
 import { Player } from './entities/player.js';
