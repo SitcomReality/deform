@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Deform</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    body {
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+      background: #000;
+      font-family: 'Space Mono', monospace;
+      color: #fff;
+      touch-action: none;
+    }
+    
+    #gameCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    
+    .screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      z-index: 10;
+    }
+    
+    .screen.active {
+      display: flex;
+    }
+    
+    .title {
+      font-size: 4rem;
+      font-weight: 700;
+      margin-bottom: 2rem;
+      color: #00FFFF;
+      text-shadow: 0 0 20px #00FFFF80;
+    }
+    
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    
+    input {
+      background: #1a1a1a;
+      border: 2px solid #00FFFF;
+      color: #fff;
+      padding: 1rem;
+      font-family: 'Space Mono', monospace;
+      font-size: 1rem;
+      outline: none;
+      width: 300px;
+      max-width: 80vw;
+    }
+    
+    input:focus {
+      border-color: #6B0FFF;
+      box-shadow: 0 0 10px #6B0FFF80;
+    }
+    
+    button {
+      background: #6B0FFF;
+      border: none;
+      color: #fff;
+      padding: 1rem 2rem;
+      font-family: 'Space Mono', monospace;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    button:hover {
+      background: #8B2FFF;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px #6B0FFF80;
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    .loading-bar {
+      width: 300px;
+      max-width: 80vw;
+      height: 4px;
+      background: #1a1a1a;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .loading-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      background: linear-gradient(90deg, #00FFFF, #6B0FFF);
+      width: 0%;
+      transition: width 0.3s;
+    }
+    
+    .loading-text {
+      margin-top: 1rem;
+      font-size: 1rem;
+      color: #00FFFF;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  
+  <div id="startScreen" class="screen active">
+    <div class="title">DEFORM</div>
+    <div class="input-group">
+      <input type="text" id="seedInput" placeholder="Enter world seed (optional)" />
+    </div>
+    <button id="startButton">START</button>
+  </div>
+  
+  <div id="loadingScreen" class="screen">
+    <div class="title">DEFORM</div>
+    <div class="loading-bar">
+      <div class="loading-fill" id="loadingFill"></div>
+    </div>
+    <div class="loading-text" id="loadingText">Generating world...</div>
+  </div>
+  
+  <script type="importmap">
+    {
+      "imports": {
+        "nipplejs": "https://esm.sh/nipplejs@0.10.1"
+      }
+    }
+  </script>
+  <script type="module" src="./main.js"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
