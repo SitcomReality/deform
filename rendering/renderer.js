@@ -86,7 +86,7 @@ export class Renderer {
     }
   }
 
-  renderCursor(cursorPos, activeTool, brushSize, grabConstraint) {
+  renderCursor(bodies, cursorPos, activeTool, brushSize, grabConstraint) {
     if (!cursorPos) return;
 
     const screenPos = this.worldToScreen(cursorPos.x, cursorPos.y);

@@ -98,6 +98,7 @@ class Game {
     this.renderer.render(this.physics.bodies);
     if (this.toolManager) {
       this.renderer.renderCursor(
+        this.physics.bodies,
         this.toolManager.currentWorldPos,
         this.toolManager.activeTool,
         this.toolManager.brushSize,
