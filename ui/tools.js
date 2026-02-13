@@ -226,42 +226,82 @@ export class ToolManager {
   }
   
   drawStructure(pos) {
-    const minStep = 1.5;
+    const gridSize = CONFIG.WORLD.GRID_SIZE;
+    const hStep = gridSize;
+    const vStep = gridSize * 0.866; // Height of equilateral triangle
     
-    // If it's a new stroke, try to start with a sturdy triangle base
-    if (!this.lastParticle) {
-      const p1 = this.physics.createParticle(pos.x, pos.y - 0.5);
-      const p2 = this.physics.createParticle(pos.x - 0.5, pos.y + 0.5);
-      const p3 = this.physics.createParticle(pos.x + 0.5, pos.y + 0.5);
-      
-      this.physics.linkParticles(p1, p2, 1.0, 10);
-      this.physics.linkParticles(p2, p3, 1.0, 10);
-      this.physics.linkParticles(p3, p1, 1.0, 10);
-      this.physics.addTriangle(p1, p2, p3);
-      
-      this.lastParticle = p1;
-      return;
+    const radius = this.brushSize;
+    const minGx = Math.floor((pos.x - radius) / hStep) - 1;
+    const maxGx = Math.ceil((pos.x + radius) / hStep) + 1;
+    const minGy = Math.floor((pos.y - radius) / vStep) - 1;
+    const maxGy = Math.ceil((pos.y + radius) / vStep) + 1;
+
+    for (let gy = minGy; gy <= maxGy; gy++) {
+      const rowOffsetX = (gy % 2 === 0) ? 0 : hStep / 2;
+      for (let gx = minGx; gx <= maxGx; gx++) {
+        const px = gx * hStep + rowOffsetX;
+        const py = gy * vStep;
+        
+        const dist = Math.sqrt(Math.pow(px - pos.x, 2) + Math.pow(py - pos.y, 2));
+        if (dist <= radius) {
+          const p = this.physics.getOrCreateGridParticle(gx, gy, px, py);
+          
+          // Connect to neighbors in the hexagonal grid
+          // Neighbors for even rows: (x-1, y), (x+1, y), (x, y-1), (x+1, y-1), (x, y+1), (x+1, y+1)
+          // Neighbors for odd rows:  (x-1, y), (x+1, y), (x-1, y-1), (x, y-1), (x-1, y+1), (x, y+1)
+          const isOdd = (gy % 2 !== 0);
+          const neighbors = [
+            [gx - 1, gy], [gx + 1, gy],
+            [isOdd ? gx - 1 : gx, gy - 1], [isOdd ? gx : gx + 1, gy - 1],
+            [isOdd ? gx - 1 : gx, gy + 1], [isOdd ? gx : gx + 1, gy + 1]
+          ];
+
+          for (const [nx, ny] of neighbors) {
+            const key = `${nx},${ny}`;
+            if (this.physics.gridParticles.has(key)) {
+              const np = this.physics.gridParticles.get(key);
+              if (this.physics.terrainBody.particles.includes(np)) {
+                // Link them
+                if (!this.physics.findConstraint(p, np)) {
+                  this.physics.linkParticles(p, np, 1.0, 10);
+                }
+              }
+            }
+          }
+
+          // Form triangles by checking sets of 3 grid points
+          // For hexagonal grid, triangles are formed between (gx, gy), (gx+1, gy), and (gx or gx+1, gy+1)
+          const checkTri = (gx1, gy1, gx2, gy2, gx3, gy3) => {
+            const p1 = this.physics.gridParticles.get(`${gx1},${gy1}`);
+            const p2 = this.physics.gridParticles.get(`${gx2},${gy2}`);
+            const p3 = this.physics.gridParticles.get(`${gx3},${gy3}`);
+            if (p1 && p2 && p3 && 
+                this.physics.terrainBody.particles.includes(p1) &&
+                this.physics.terrainBody.particles.includes(p2) &&
+                this.physics.terrainBody.particles.includes(p3)) {
+              // Ensure constraints exist
+              if (!this.physics.findConstraint(p1, p2)) this.physics.linkParticles(p1, p2, 1.0, 10);
+              if (!this.physics.findConstraint(p2, p3)) this.physics.linkParticles(p2, p3, 1.0, 10);
+              if (!this.physics.findConstraint(p3, p1)) this.physics.linkParticles(p3, p1, 1.0, 10);
+              
+              // Only add if triangle doesn't already exist
+              const exists = this.physics.terrainBody.triangles.some(t => 
+                (t.p1 === p1 || t.p1 === p2 || t.p1 === p3) &&
+                (t.p2 === p1 || t.p2 === p2 || t.p2 === p3) &&
+                (t.p3 === p1 || t.p3 === p2 || t.p3 === p3)
+              );
+              if (!exists) {
+                this.physics.addTriangle(p1, p2, p3);
+              }
+            }
+          };
+
+          // Check standard triangle patterns for this grid point
+          checkTri(gx, gy, gx + 1, gy, isOdd ? gx : gx + 1, gy - 1);
+          checkTri(gx, gy, gx + 1, gy, isOdd ? gx : gx + 1, gy + 1);
+        }
+      }
     }
-
-    const dist = Math.sqrt(
-      Math.pow(pos.x - this.lastParticle.pos.x, 2) + 
-      Math.pow(pos.y - this.lastParticle.pos.y, 2)
-    );
-    
-    if (dist < minStep) return;
-
-    // Create a new particle and link it to form a "ribbon"
-    const particle = this.physics.createParticle(pos.x, pos.y);
-    
-    // Always link to previous in stroke
-    this.physics.linkParticles(this.lastParticle, particle, 1.0, 10);
-    
-    // Auto-triangulate based on brush size for thicker structures
-    // The triangulation radius scales slightly with brush size to fill volume
-    const triRadius = Math.max(3.0, this.brushSize * 0.8);
-    this.physics.triangulate(particle, triRadius);
-    
-    this.lastParticle = particle;
   }
   
   pourSand(pos) {

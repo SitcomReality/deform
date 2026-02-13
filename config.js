@@ -29,6 +29,7 @@ export const CONFIG = {
     LEVEL_WIDTH: 80,
     LEVEL_HEIGHT: 60,
     TERRAIN_SEED: Date.now(),
+    GRID_SIZE: 2.2,
   },
   
   // Performance

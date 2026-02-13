@@ -8,6 +8,7 @@ export class PhysicsEngine {
     this.spatialHash = new Map();
     this.terrainBody = null;
     this.grabConstraint = null;
+    this.gridParticles = new Map(); // key: "gx,gy" -> Particle
   }
   
   addBody(body) {
@@ -39,6 +40,7 @@ export class PhysicsEngine {
     this.terrainBody = newBody;
     this.grabConstraint = null;
     this.spatialHash.clear();
+    this.gridParticles.clear();
   }
   
   createParticle(x, y, mass = 1, color = null) {
@@ -179,6 +181,14 @@ export class PhysicsEngine {
     for (let i = toRemove.length - 1; i >= 0; i--) {
       const particle = this.terrainBody.particles[toRemove[i]];
       
+      // Remove from grid map if it exists
+      for (let [key, val] of this.gridParticles.entries()) {
+        if (val === particle) {
+          this.gridParticles.delete(key);
+          break;
+        }
+      }
+
       // Remove constraints connected to this particle
       this.terrainBody.constraints = this.terrainBody.constraints.filter(
         c => c.p1 !== particle && c.p2 !== particle
@@ -220,6 +230,19 @@ export class PhysicsEngine {
     }
   }
   
+  getOrCreateGridParticle(gx, gy, x, y) {
+    const key = `${gx},${gy}`;
+    if (this.gridParticles.has(key)) {
+      const p = this.gridParticles.get(key);
+      // Safety check: make sure it's still in the simulation
+      if (this.terrainBody.particles.includes(p)) return p;
+    }
+    
+    const p = this.createParticle(x, y);
+    this.gridParticles.set(key, p);
+    return p;
+  }
+
   update(dt) {
     const substepDt = dt / CONFIG.PHYSICS.SUBSTEPS;
     
