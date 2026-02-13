@@ -107,6 +107,35 @@ export class Renderer {
     this.ctx.fillStyle = CONFIG.COLORS.PRIMARY;
     this.ctx.fill();
 
+    // Render existing pins
+    this.ctx.fillStyle = CONFIG.COLORS.PIN;
+    for (const body of bodies) {
+      for (const p of body.particles) {
+        if (p.pinned) {
+          const scr = this.worldToScreen(p.pos.x, p.pos.y);
+          this.ctx.fillRect(scr.x - 3, scr.y - 3, 6, 6);
+          this.ctx.strokeStyle = '#000';
+          this.ctx.lineWidth = 1;
+          this.ctx.strokeRect(scr.x - 3, scr.y - 3, 6, 6);
+        }
+      }
+    }
+
+    // If pin tool is active, show all vertices faintly to help targeting
+    if (activeTool === 'pin') {
+      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+      for (const body of bodies) {
+        for (const p of body.particles) {
+          if (!p.pinned) {
+            const scr = this.worldToScreen(p.pos.x, p.pos.y);
+            this.ctx.beginPath();
+            this.ctx.arc(scr.x, scr.y, 2, 0, Math.PI * 2);
+            this.ctx.fill();
+          }
+        }
+      }
+    }
+
     if (grabConstraint) {
       const p1 = this.worldToScreen(grabConstraint.particle.pos.x, grabConstraint.particle.pos.y);
       const p2 = this.worldToScreen(grabConstraint.pos.x, grabConstraint.pos.y);

@@ -12,6 +12,8 @@ export class ToolManager {
     this.currentWorldPos = { x: 0, y: 0 };
     this.lastPos = null;
     this.lastParticle = null; // For connecting chains
+    this.pinnedThisDrag = new Set();
+    this.audioCtx = null;
     
     this.setupUI();
     this.setupInput();
@@ -172,7 +174,10 @@ export class ToolManager {
     // Mouse
     canvas.addEventListener('mousedown', (e) => handleStart(e.clientX, e.clientY));
     canvas.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY));
-    canvas.addEventListener('mouseup', handleEnd);
+    canvas.addEventListener('mouseup', () => {
+      handleEnd();
+      this.pinnedThisDrag.clear();
+    });
     
     // Touch
     canvas.addEventListener('touchstart', (e) => {
@@ -326,9 +331,33 @@ export class ToolManager {
   }
   
   pinParticles(pos) {
-    // Debounce pin to avoid rapid toggle
-    if (Math.random() > 0.1) return; 
-    this.physics.pinParticlesInRadius(pos.x, pos.y, this.brushSize);
+    const success = this.physics.pinParticlesInRadius(pos.x, pos.y, this.brushSize, this.pinnedThisDrag);
+    if (success) {
+      this.playPinSound();
+    }
+  }
+
+  playPinSound() {
+    if (!this.audioCtx) {
+      this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    
+    // Low frequency tack sound
+    const osc = this.audioCtx.createOscillator();
+    const gain = this.audioCtx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, this.audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(100, this.audioCtx.currentTime + 0.1);
+    
+    gain.gain.setValueAtTime(0.1, this.audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.1);
+    
+    osc.connect(gain);
+    gain.connect(this.audioCtx.destination);
+    
+    osc.start();
+    osc.stop(this.audioCtx.currentTime + 0.1);
   }
   
   explodeParticles(pos) {

@@ -12,6 +12,7 @@ export const CONFIG = {
     FLUID_ACID: '#39FF14',
     SAND: '#FFD700',
     DRAG_LINE: '#FFFFFF',
+    PIN: '#FFFFFF',
   },
   
   // Physics

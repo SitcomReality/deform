@@ -203,17 +203,41 @@ export class PhysicsEngine {
     }
   }
   
-  pinParticlesInRadius(x, y, radius) {
-    if (!this.terrainBody) return;
+  pinParticlesInRadius(x, y, radius, visitedSet = null) {
+    if (!this.terrainBody) return false;
     
+    let toggledAny = false;
+    let closest = null;
+    let minDist = radius * 2; // Forgiving search distance
+
     for (const p of this.terrainBody.particles) {
+      if (visitedSet && visitedSet.has(p)) continue;
+
       const dx = p.pos.x - x;
       const dy = p.pos.y - y;
       const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      // If we are within the brush radius, toggle everything
       if (dist < radius) {
-        p.pinned = !p.pinned; // Toggle pin
+        p.pinned = !p.pinned;
+        if (visitedSet) visitedSet.add(p);
+        toggledAny = true;
+      } 
+      // Otherwise, track the closest particle for "forgiving" single-click targeting
+      else if (dist < minDist) {
+        minDist = dist;
+        closest = p;
       }
     }
+
+    // If nothing was in the radius but we found a close neighbor, toggle that (forgiving targeting)
+    if (!toggledAny && closest && (!visitedSet || !visitedSet.has(closest))) {
+      closest.pinned = !closest.pinned;
+      if (visitedSet) visitedSet.add(closest);
+      toggledAny = true;
+    }
+
+    return toggledAny;
   }
   
   explodeParticlesInRadius(x, y, radius, force) {
