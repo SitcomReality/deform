@@ -16,6 +16,30 @@ export class PhysicsEngine {
       this.terrainBody = body;
     }
   }
+
+  clearAll() {
+    this.bodies = [];
+    this.terrainBody = null;
+    this.grabConstraint = null;
+    this.spatialHash.clear();
+    
+    // We need to re-create the base body. 
+    // Since we are in a module, we can't easily sync-import but we know SoftBody is available in terrain.js
+    // Alternatively, let's just make it a habit to provide a container.
+  }
+
+  setBaseBody(body) {
+    this.bodies = [body];
+    this.terrainBody = body;
+  }
+
+  clearAll(SoftBodyClass) {
+    const newBody = new SoftBodyClass();
+    this.bodies = [newBody];
+    this.terrainBody = newBody;
+    this.grabConstraint = null;
+    this.spatialHash.clear();
+  }
   
   createParticle(x, y, mass = 1, color = null) {
     if (!this.terrainBody) return null;

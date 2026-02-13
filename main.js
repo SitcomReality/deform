@@ -14,9 +14,15 @@ class Game {
     this.toolManager = null;
     
     this.running = false;
+    this.paused = false;
     this.lastTime = 0;
     
     this.init();
+  }
+
+  togglePause() {
+    this.paused = !this.paused;
+    return this.paused;
   }
   
   init() {
@@ -36,7 +42,7 @@ class Game {
     this.screenManager.setLoadingProgress(90, 'Initializing tools...');
     await this.sleep(200);
     if (!this.toolManager) {
-      this.toolManager = new ToolManager(this.physics, this.renderer);
+      this.toolManager = new ToolManager(this.physics, this.renderer, this);
     }
     
     this.screenManager.setLoadingProgress(100, 'Ready!');
@@ -64,7 +70,7 @@ class Game {
     this.screenManager.setLoadingProgress(70, 'Building physics...');
     await this.sleep(100);
     
-    this.physics.addBody(level);
+    this.physics.setBaseBody(level);
   }
   
   sleep(ms) {
@@ -84,6 +90,7 @@ class Game {
   }
   
   update(dt) {
+    if (this.paused) return;
     this.physics.update(dt);
   }
   

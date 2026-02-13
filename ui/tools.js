@@ -1,8 +1,12 @@
+import { SoftBody } from '../engine/mesh.js';
+
 export class ToolManager {
-  constructor(physics, renderer) {
+  constructor(physics, renderer, game) {
     this.physics = physics;
     this.renderer = renderer;
+    this.game = game;
     this.activeTool = 'drag';
+    this.brushSize = 3;
     this.isDragging = false;
     this.lastPos = null;
     this.lastParticle = null; // For connecting chains
@@ -42,6 +46,7 @@ export class ToolManager {
     
     for (const tool of tools) {
       const btn = document.createElement('button');
+      btn.className = 'tool-btn';
       btn.innerHTML = `${tool.icon}<br><span style="font-size: 0.7rem">${tool.label}</span>`;
       btn.style.cssText = `
         background: ${this.activeTool === tool.name ? '#6B0FFF' : '#1a1a1a'};
@@ -54,20 +59,87 @@ export class ToolManager {
         transition: all 0.2s;
         border-radius: 4px;
         user-select: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
       `;
       
       btn.addEventListener('click', () => {
         this.activeTool = tool.name;
         // Update all button styles
-        toolBar.querySelectorAll('button').forEach((b, i) => {
-          b.style.background = tools[i].name === tool.name ? '#6B0FFF' : '#1a1a1a';
+        toolBar.querySelectorAll('.tool-btn').forEach((b, i) => {
+          if (i < tools.length) {
+            b.style.background = tools[i].name === tool.name ? '#6B0FFF' : '#1a1a1a';
+          }
         });
       });
       
       toolBar.appendChild(btn);
     }
+
+    // Controls Section (Brush, Pause, Clear)
+    const controlBar = document.createElement('div');
+    controlBar.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 10px 20px;
+      border: 2px solid #6B0FFF;
+      z-index: 100;
+      border-radius: 8px;
+    `;
+
+    // Brush Size
+    const brushContainer = document.createElement('div');
+    brushContainer.style.display = 'flex';
+    brushContainer.style.flexDirection = 'column';
+    brushContainer.style.gap = '4px';
+    brushContainer.innerHTML = `<label style="font-size: 0.6rem; color: #00FFFF; text-transform: uppercase;">Brush Size: <span id="brushVal">${this.brushSize}</span></label>`;
     
+    const brushSlider = document.createElement('input');
+    brushSlider.type = 'range';
+    brushSlider.min = '1';
+    brushSlider.max = '15';
+    brushSlider.value = this.brushSize;
+    brushSlider.style.width = '100px';
+    brushSlider.addEventListener('input', (e) => {
+      this.brushSize = parseInt(e.target.value);
+      document.getElementById('brushVal').textContent = this.brushSize;
+    });
+    brushContainer.appendChild(brushSlider);
+
+    // Pause Button
+    const pauseBtn = document.createElement('button');
+    pauseBtn.textContent = 'PAUSE';
+    pauseBtn.style.cssText = 'background: #1a1a1a; border: 1px solid #fff; color: #fff; padding: 5px 10px; cursor: pointer; font-family: inherit; font-size: 0.8rem;';
+    pauseBtn.onclick = () => {
+      const isPaused = this.game.togglePause();
+      pauseBtn.textContent = isPaused ? 'RESUME' : 'PAUSE';
+      pauseBtn.style.background = isPaused ? '#f00' : '#1a1a1a';
+    };
+
+    // Clear Button
+    const clearBtn = document.createElement('button');
+    clearBtn.textContent = 'CLEAR ALL';
+    clearBtn.style.cssText = 'background: #1a1a1a; border: 1px solid #ff4444; color: #ff4444; padding: 5px 10px; cursor: pointer; font-family: inherit; font-size: 0.8rem;';
+    clearBtn.onclick = () => {
+      if (confirm('Clear everything?')) {
+        this.physics.clearAll(SoftBody);
+      }
+    };
+
+    controlBar.appendChild(brushContainer);
+    controlBar.appendChild(pauseBtn);
+    controlBar.appendChild(clearBtn);
+
     document.body.appendChild(toolBar);
+    document.body.appendChild(controlBar);
   }
   
   setupInput() {
@@ -193,24 +265,19 @@ export class ToolManager {
   }
   
   eraseTerrain(pos) {
-    const radius = 2;
-    this.physics.removeParticlesInRadius(pos.x, pos.y, radius);
+    this.physics.removeParticlesInRadius(pos.x, pos.y, this.brushSize);
   }
   
   pinParticles(pos) {
     // Debounce pin to avoid rapid toggle
     if (Math.random() > 0.1) return; 
-    
-    const radius = 1.5;
-    this.physics.pinParticlesInRadius(pos.x, pos.y, radius);
+    this.physics.pinParticlesInRadius(pos.x, pos.y, this.brushSize);
   }
   
   explodeParticles(pos) {
     // Explosion should only happen on click start really, but drag is fun too
     if (Math.random() > 0.1) return;
-    
-    const radius = 5;
     const force = 50;
-    this.physics.explodeParticlesInRadius(pos.x, pos.y, radius, force);
+    this.physics.explodeParticlesInRadius(pos.x, pos.y, this.brushSize * 2, force);
   }
 }
