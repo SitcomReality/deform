@@ -1,6 +1,5 @@
 import { SoftBody, Particle, Constraint, Triangle } from '../engine/mesh.js';
-import { WORLD_CONFIG } from '../config/world.js';
-import { RENDER_CONFIG } from '../config/render.js';
+import { CONFIG } from '../config.js';
 import { SeededRandom } from '../utils/random.js';
 
 export class TerrainGenerator {
@@ -8,23 +7,19 @@ export class TerrainGenerator {
     this.rng = new SeededRandom(seed);
   }
   
-  generateChunk(chunkX, chunkY) {
+  generateLevel() {
     const body = new SoftBody();
-    const size = WORLD_CONFIG.CHUNK_SIZE;
+    const width = CONFIG.WORLD.LEVEL_WIDTH;
+    const height = CONFIG.WORLD.LEVEL_HEIGHT;
     const particles = [];
-    const bedrockY = 30; // Base of the world
     
-    // Generate height map
-    for (let x = 0; x < size; x++) {
-      const worldX = chunkX * size + x;
-      const thickness = this.getTerrainHeight(worldX);
+    // Generate terrain columns
+    for (let x = 0; x < width; x++) {
+      const terrainHeight = this.getTerrainHeight(x);
       const column = [];
       
-      for (let y = 0; y < thickness; y++) {
-        // Build upwards from bedrock (decreasing Y is up)
-        const worldY = bedrockY - y;
-        const isBedrock = (y === 0);
-        const particle = new Particle(worldX, worldY, 1, isBedrock);
+      for (let y = height - terrainHeight; y < height; y++) {
+        const particle = new Particle(x, y, 1, y === height - 1);
         body.addParticle(particle);
         column.push(particle);
       }
@@ -40,12 +35,7 @@ export class TerrainGenerator {
       for (let y = 0; y < Math.min(col1.length, col2.length); y++) {
         // Horizontal constraint
         if (col2[y]) {
-          const c = new Constraint(col1[y], col2[y], 1.0, 5);
-          body.addConstraint(c);
-          // If this is the top layer, it's a surface edge
-          if (y === col1.length - 1 && y === col2.length - 1) {
-            body.edges.push(c);
-          }
+          body.addConstraint(new Constraint(col1[y], col2[y], 1.0, 5));
         }
         
         // Vertical constraint
@@ -61,8 +51,8 @@ export class TerrainGenerator {
         
         // Create triangles
         if (col2[y] && y > 0 && col2[y - 1]) {
-          body.addTriangle(new Triangle(col1[y], col2[y], col1[y - 1], RENDER_CONFIG.COLORS.TERRAIN));
-          body.addTriangle(new Triangle(col2[y], col2[y - 1], col1[y - 1], RENDER_CONFIG.COLORS.TERRAIN));
+          body.addTriangle(new Triangle(col1[y], col2[y], col1[y - 1], CONFIG.COLORS.TERRAIN));
+          body.addTriangle(new Triangle(col2[y], col2[y - 1], col1[y - 1], CONFIG.COLORS.TERRAIN));
         }
       }
     }
@@ -73,11 +63,11 @@ export class TerrainGenerator {
   getTerrainHeight(x) {
     // Multi-octave noise approximation
     let height = 0;
-    height += Math.sin(x * 0.02) * 5;
-    height += Math.sin(x * 0.05) * 3;
-    height += Math.sin(x * 0.1) * 1.5;
+    height += Math.sin(x * 0.15) * 8;
+    height += Math.sin(x * 0.3) * 4;
+    height += Math.sin(x * 0.6) * 2;
     height += this.rng.range(-0.5, 0.5);
     
-    return Math.max(5, Math.floor(15 + height));
+    return Math.max(5, Math.floor(20 + height));
   }
 }

@@ -1,4 +1,0 @@
-export const PERF_CONFIG = {
-  MAX_PARTICLES: 10000,
-  SPATIAL_CELL_SIZE: 10,
-};

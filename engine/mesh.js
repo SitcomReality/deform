@@ -1,14 +1,13 @@
 import { Vec2 } from '../utils/math.js';
 
 export class Particle {
-  constructor(x, y, mass = 1, pinned = false, radius = 0.1) {
+  constructor(x, y, mass = 1, pinned = false) {
     this.pos = new Vec2(x, y);
     this.oldPos = new Vec2(x, y);
     this.force = new Vec2(0, 0);
     this.mass = mass;
     this.pinned = pinned;
-    this.radius = radius; 
-    this.isGrounded = false;
+    this.radius = 0.5;
   }
   
   applyForce(fx, fy) {
@@ -67,7 +66,6 @@ export class SoftBody {
     this.particles = [];
     this.constraints = [];
     this.triangles = [];
-    this.edges = []; // Constraints that act as physical boundaries
   }
   
   addParticle(particle) {

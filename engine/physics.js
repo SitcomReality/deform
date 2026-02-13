@@ -1,27 +1,112 @@
-import { PHYSICS_CONFIG } from '../config/physics.js';
-import { PERF_CONFIG } from '../config/perf.js';
+import { CONFIG } from '../config.js';
+import { Particle, Constraint } from './mesh.js';
 
 export class PhysicsEngine {
   constructor() {
     this.bodies = [];
     this.spatialHash = new Map();
+    this.terrainBody = null; // Main terrain body for manipulation
   }
   
   addBody(body) {
     this.bodies.push(body);
+    if (!this.terrainBody) {
+      this.terrainBody = body;
+    }
+  }
+  
+  createParticle(x, y) {
+    if (!this.terrainBody) return null;
+    const particle = new Particle(x, y);
+    this.terrainBody.addParticle(particle);
+    return particle;
+  }
+  
+  connectNearbyParticles(particle, maxDist) {
+    if (!this.terrainBody) return;
+    
+    const nearby = [];
+    for (const p of this.terrainBody.particles) {
+      if (p === particle) continue;
+      const dx = p.pos.x - particle.pos.x;
+      const dy = p.pos.y - particle.pos.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < maxDist) {
+        nearby.push({ particle: p, dist });
+      }
+    }
+    
+    nearby.sort((a, b) => a.dist - b.dist);
+    
+    for (let i = 0; i < Math.min(3, nearby.length); i++) {
+      const constraint = new Constraint(particle, nearby[i].particle, 1.0, 5);
+      this.terrainBody.addConstraint(constraint);
+    }
+  }
+  
+  removeParticlesInRadius(x, y, radius) {
+    if (!this.terrainBody) return;
+    
+    const toRemove = [];
+    for (let i = 0; i < this.terrainBody.particles.length; i++) {
+      const p = this.terrainBody.particles[i];
+      const dx = p.pos.x - x;
+      const dy = p.pos.y - y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < radius) {
+        toRemove.push(i);
+      }
+    }
+    
+    // Remove from highest index to lowest to avoid index shifting issues
+    for (let i = toRemove.length - 1; i >= 0; i--) {
+      const particle = this.terrainBody.particles[toRemove[i]];
+      
+      // Remove constraints connected to this particle
+      this.terrainBody.constraints = this.terrainBody.constraints.filter(
+        c => c.p1 !== particle && c.p2 !== particle
+      );
+      
+      // Remove triangles containing this particle
+      this.terrainBody.triangles = this.terrainBody.triangles.filter(
+        t => t.p1 !== particle && t.p2 !== particle && t.p3 !== particle
+      );
+      
+      this.terrainBody.particles.splice(toRemove[i], 1);
+    }
+  }
+  
+  pinParticlesInRadius(x, y, radius) {
+    if (!this.terrainBody) return;
+    
+    for (const p of this.terrainBody.particles) {
+      const dx = p.pos.x - x;
+      const dy = p.pos.y - y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < radius) {
+        p.pinned = !p.pinned; // Toggle pin
+      }
+    }
+  }
+  
+  explodeParticlesInRadius(x, y, radius, force) {
+    if (!this.terrainBody) return;
+    
+    for (const p of this.terrainBody.particles) {
+      const dx = p.pos.x - x;
+      const dy = p.pos.y - y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < radius && dist > 0) {
+        const strength = (1 - dist / radius) * force;
+        p.applyForce((dx / dist) * strength, (dy / dist) * strength);
+      }
+    }
   }
   
   update(dt) {
-    const substepDt = dt / PHYSICS_CONFIG.SUBSTEPS;
+    const substepDt = dt / CONFIG.PHYSICS.SUBSTEPS;
     
-    for (let i = 0; i < PHYSICS_CONFIG.SUBSTEPS; i++) {
-      // Reset grounding state for non-pinned particles
-      for (const body of this.bodies) {
-        for (const p of body.particles) {
-          if (!p.pinned) p.isGrounded = false;
-        }
-      }
-
+    for (let i = 0; i < CONFIG.PHYSICS.SUBSTEPS; i++) {
       this.applyForces(substepDt);
       this.integrate(substepDt);
       this.solveConstraints();
@@ -35,7 +120,7 @@ export class PhysicsEngine {
       for (const particle of body.particles) {
         if (!particle.pinned) {
           // Gravity
-          particle.force.y += PHYSICS_CONFIG.GRAVITY * particle.mass;
+          particle.force.y += CONFIG.PHYSICS.GRAVITY * particle.mass;
         }
       }
     }
@@ -48,8 +133,8 @@ export class PhysicsEngine {
         
         // Verlet integration
         const vel = {
-          x: (particle.pos.x - particle.oldPos.x) * PHYSICS_CONFIG.DAMPING,
-          y: (particle.pos.y - particle.oldPos.y) * PHYSICS_CONFIG.DAMPING
+          x: (particle.pos.x - particle.oldPos.x) * CONFIG.PHYSICS.DAMPING,
+          y: (particle.pos.y - particle.oldPos.y) * CONFIG.PHYSICS.DAMPING
         };
         
         particle.oldPos.x = particle.pos.x;
@@ -65,7 +150,7 @@ export class PhysicsEngine {
   }
   
   solveConstraints() {
-    for (let iter = 0; iter < PHYSICS_CONFIG.CONSTRAINT_ITERATIONS; iter++) {
+    for (let iter = 0; iter < CONFIG.PHYSICS.CONSTRAINT_ITERATIONS; iter++) {
       for (const body of this.bodies) {
         for (const constraint of body.constraints) {
           if (!constraint.broken) {
@@ -78,7 +163,7 @@ export class PhysicsEngine {
   
   updateSpatialHash() {
     this.spatialHash.clear();
-    const cellSize = PERF_CONFIG.SPATIAL_CELL_SIZE;
+    const cellSize = CONFIG.PERF.SPATIAL_CELL_SIZE;
     
     for (const body of this.bodies) {
       for (const particle of body.particles) {
@@ -95,7 +180,6 @@ export class PhysicsEngine {
   }
   
   handleCollisions() {
-    // Particle-Particle collisions
     for (const cell of this.spatialHash.values()) {
       for (let i = 0; i < cell.length; i++) {
         for (let j = i + 1; j < cell.length; j++) {
@@ -103,68 +187,15 @@ export class PhysicsEngine {
         }
       }
     }
-
-    // Particle-Edge collisions (Player vs Terrain Surface)
-    for (const bodyA of this.bodies) {
-      if (bodyA.pinned) continue; // Skip static-static
-      for (const p of bodyA.particles) {
-        if (p.pinned) continue;
-        for (const bodyB of this.bodies) {
-          if (bodyA === bodyB) continue;
-          for (const edge of bodyB.edges) {
-            this.resolveParticleEdgeCollision(p, edge);
-          }
-        }
-      }
-    }
-  }
-
-  resolveParticleEdgeCollision(p, edge) {
-    if (edge.broken) return;
-    const pA = edge.p1;
-    const pB = edge.p2;
-
-    const abx = pB.pos.x - pA.pos.x;
-    const aby = pB.pos.y - pA.pos.y;
-    const apx = p.pos.x - pA.pos.x;
-    const apy = p.pos.y - pA.pos.y;
-
-    const abLenSq = abx * abx + aby * aby;
-    if (abLenSq === 0) return;
-
-    let t = (apx * abx + apy * aby) / abLenSq;
-    t = Math.max(0, Math.min(1, t));
-
-    const nearestX = pA.pos.x + t * abx;
-    const nearestY = pA.pos.y + t * aby;
-
-    const dx = p.pos.x - nearestX;
-    const dy = p.pos.y - nearestY;
-    const distSq = dx * dx + dy * dy;
-    const minDist = p.radius + 0.05; // Edge has a tiny virtual thickness
-
-    if (distSq < minDist * minDist && distSq > 0) {
-      const dist = Math.sqrt(distSq);
-      const overlap = minDist - dist;
-      const nx = dx / dist;
-      const ny = dy / dist;
-
-      p.pos.x += nx * overlap;
-      p.pos.y += ny * overlap;
-
-      // If pushed up, mark as grounded
-      if (ny < -0.1) p.isGrounded = true;
-    }
   }
   
   resolveParticleCollision(p1, p2) {
     const dx = p2.pos.x - p1.pos.x;
     const dy = p2.pos.y - p1.pos.y;
-    const distSq = dx * dx + dy * dy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
     const minDist = p1.radius + p2.radius;
     
-    if (distSq < minDist * minDist && distSq > 0) {
-      const dist = Math.sqrt(distSq);
+    if (dist < minDist && dist > 0) {
       const overlap = minDist - dist;
       const nx = dx / dist;
       const ny = dy / dist;
@@ -177,12 +208,9 @@ export class PhysicsEngine {
       } else if (!p1.pinned) {
         p1.pos.x -= nx * overlap;
         p1.pos.y -= ny * overlap;
-        // Corrected grounding: if normal points up from terrain to player
-        if (ny < -0.5) p1.isGrounded = true;
       } else if (!p2.pinned) {
         p2.pos.x += nx * overlap;
         p2.pos.y += ny * overlap;
-        if (ny > 0.5) p2.isGrounded = true;
       }
     }
   }
