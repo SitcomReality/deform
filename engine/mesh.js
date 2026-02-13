@@ -7,7 +7,8 @@ export class Particle {
     this.force = new Vec2(0, 0);
     this.mass = mass;
     this.pinned = pinned;
-    this.radius = 0.5;
+    this.radius = 0.45; // Slightly less than 0.5 to allow for closer visual contact
+    this.isGrounded = false;
   }
   
   applyForce(fx, fy) {

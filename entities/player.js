@@ -30,12 +30,23 @@ export class Player {
     this.body.addTriangle(new Triangle(p1, p2, p3, RENDER_CONFIG.COLORS.PLAYER));
     this.body.addTriangle(new Triangle(p1, p3, p4, RENDER_CONFIG.COLORS.PLAYER));
     
-    this.particles = [p1, p2, p3, p4];
+    // Add center particle for structural stability
+    const pc = new Particle(x, y - size, 1.2);
+    this.body.addParticle(pc);
+    this.body.addConstraint(new Constraint(p1, pc, 1.0));
+    this.body.addConstraint(new Constraint(p2, pc, 1.0));
+    this.body.addConstraint(new Constraint(p3, pc, 1.0));
+    this.body.addConstraint(new Constraint(p4, pc, 1.0));
+
+    this.particles = [p1, p2, p3, p4, pc];
   }
   
   update() {
     const speed = PLAYER_CONFIG.SPEED;
     
+    // Determine grounded status from particles
+    this.onGround = this.particles.some(p => p.isGrounded);
+
     for (const p of this.particles) {
       if (this.input.left) {
         p.applyForce(-speed, 0);
@@ -49,12 +60,7 @@ export class Player {
       for (const p of this.particles) {
         p.applyForce(0, -PLAYER_CONFIG.JUMP_FORCE);
       }
-      this.onGround = false;
     }
-    
-    // Check if on ground (simple check for now based on floor level)
-    const lowestY = Math.max(...this.particles.map(p => p.pos.y));
-    this.onGround = lowestY > 5; // Updated to match world scale
   }
   
   getCenterPosition() {

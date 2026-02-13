@@ -15,6 +15,13 @@ export class PhysicsEngine {
     const substepDt = dt / PHYSICS_CONFIG.SUBSTEPS;
     
     for (let i = 0; i < PHYSICS_CONFIG.SUBSTEPS; i++) {
+      // Reset grounding state for non-pinned particles
+      for (const body of this.bodies) {
+        for (const p of body.particles) {
+          if (!p.pinned) p.isGrounded = false;
+        }
+      }
+
       this.applyForces(substepDt);
       this.integrate(substepDt);
       this.solveConstraints();
@@ -100,10 +107,11 @@ export class PhysicsEngine {
   resolveParticleCollision(p1, p2) {
     const dx = p2.pos.x - p1.pos.x;
     const dy = p2.pos.y - p1.pos.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
+    const distSq = dx * dx + dy * dy;
     const minDist = p1.radius + p2.radius;
     
-    if (dist < minDist && dist > 0) {
+    if (distSq < minDist * minDist && distSq > 0) {
+      const dist = Math.sqrt(distSq);
       const overlap = minDist - dist;
       const nx = dx / dist;
       const ny = dy / dist;
@@ -116,9 +124,13 @@ export class PhysicsEngine {
       } else if (!p1.pinned) {
         p1.pos.x -= nx * overlap;
         p1.pos.y -= ny * overlap;
+        // If p1 hits a pinned particle (terrain) from above, mark it as grounded
+        if (ny < -0.5) p1.isGrounded = true;
       } else if (!p2.pinned) {
         p2.pos.x += nx * overlap;
         p2.pos.y += ny * overlap;
+        // If p2 hits a pinned particle (terrain) from above, mark it as grounded
+        if (ny > 0.5) p2.isGrounded = true;
       }
     }
   }
